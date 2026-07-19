@@ -1,0 +1,30 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# env files (podem conter segredos)
+.env
+.env*.local
+
+# supabase
+supabase/.branches
+supabase/.temp
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editor / os
+.DS_Store
+Thumbs.db

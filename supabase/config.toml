@@ -1,0 +1,38 @@
+project_id = "manhwa-catalog"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+# Acompanha o mínimo já aplicado no formulário (ver SenhaSchema em
+# lib/validacao/auth.ts) — defesa em profundidade para qualquer chamada
+# que não passe pela validação do formulário (ex.: direto pela API do
+# Supabase). Isto só configura o ambiente LOCAL do CLI; replicar em
+# Authentication → Policies no painel do projeto hospedado.
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[auth.external.google]
+enabled = false
+client_id = ""
+secret = ""

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # Variáveis fictícias: nenhuma chamada de rede real acontece durante
+      # `next build` além da geração das páginas de catálogo (que já
+      # tratam falha de rede/API externa sem quebrar o build — ver
+      # try/catch em app/page.tsx, app/sem-traducao/page.tsx etc.). Não
+      # exige nenhum segredo real do Supabase para compilar; só valida
+      # que o projeto builda sem erros de tipo/lint antes do merge.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://example.com
