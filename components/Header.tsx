@@ -45,8 +45,8 @@ export function Header({ usuarioInicial }: { usuarioInicial: User | null }) {
           <Image
             src="/kuboverse-logo.png"
             alt="KuboVerse"
-            width={280}
-            height={72}
+            width={331}
+            height={92}
             priority
             className="h-10 w-auto object-contain sm:h-12"
           />
