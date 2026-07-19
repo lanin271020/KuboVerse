@@ -9,8 +9,7 @@ const LIMITE_SITEMAP = 100;
 
 // Acompanha o mesmo cache do catálogo (ver revalidate nas páginas que o
 // consomem) — gerar este arquivo do zero em toda requisição de robô de
-// busca bateria as mesmas APIs externas (MangaDex/MangaLivre) sem
-// necessidade.
+// busca bateria a API externa (MangaDex) sem necessidade.
 export const revalidate = 600;
 
 const PAGINAS_ESTATICAS: MetadataRoute.Sitemap = [

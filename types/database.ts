@@ -7,7 +7,7 @@
  *   npx supabase gen types typescript --linked > types/database.ts
  *
  * As tabelas `favorites`, `reading_history` e `comments` referenciam os IDs
- * externos (MangaDex/MangaLivre) como texto — não existe tabela local de
+ * externos (MangaDex) como texto — não existe tabela local de
  * "obras", pois o catálogo é buscado ao vivo em lib/catalogo.ts.
  */
 

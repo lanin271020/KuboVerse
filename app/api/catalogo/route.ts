@@ -8,8 +8,8 @@ import { buscarCatalogo } from "@/lib/catalogo";
 export const revalidate = 600;
 
 // Tetos além dos quais não faz sentido paginar de uma vez — sem eles, um
-// `limit` gigante forçaria buscas pesadas na MangaDex/MangaLivre a cada
-// chamada (um vetor fácil de abuso, mesmo sem intenção maliciosa).
+// `limit` gigante forçaria buscas pesadas na MangaDex a cada chamada
+// (um vetor fácil de abuso, mesmo sem intenção maliciosa).
 const LIMITE_MAXIMO = 100;
 const OFFSET_MAXIMO = 100_000;
 
@@ -19,11 +19,7 @@ const OFFSET_MAXIMO = 100_000;
 // omita a querystring (ex.: acessar /api/catalogo direto, sem parâmetros).
 //
 // `minimo` existe separadamente do "0 vira padrão" acima porque offset=0
-// é um valor legítimo (primeira página), mas limit=0 não é: várias contas
-// internas (ver `paginaMangaLivre = Math.floor(offset / limit) + 1` em
-// lib/catalogo.ts) dividem por `limit` — um limit=0 vindo da querystring
-// (ex.: `?limit=0`) geraria Infinity/NaN silenciosamente em vez de um erro
-// claro, quebrando a paginação da fonte MangaLivre sem aviso nenhum.
+// é um valor legítimo (primeira página), mas limit=0 não é.
 function parseInteiro(valor: string | null, padrao: number, minimo: number, maximo: number): number {
   if (valor === null) return padrao;
   const numero = Number(valor);

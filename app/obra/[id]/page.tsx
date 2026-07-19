@@ -5,8 +5,8 @@ import Link from "next/link";
 import {
   buscarObraPorId,
   buscarCapitulosDaObra,
-  decodificarId,
   temSequenciaContinuaDesdeUm,
+  decodificarId,
 } from "@/lib/catalogo";
 import type { Obra, Capitulo, TipoObra } from "@/lib/types";
 import { BotaoFavorito } from "@/components/BotaoFavorito";
@@ -111,7 +111,7 @@ export default async function ObraPage({
 
   // JSON-LD (schema.org/Book — não existe um tipo dedicado a mangá/manhwa
   // amplamente suportado pelos buscadores) para a página da obra. `titulo`
-  // e `sinopse` vêm de fontes externas (MangaDex/MangaLivre) — nunca
+  // e `sinopse` vêm de fonte externa (MangaDex) — nunca
   // confiáveis por padrão — então usamos `JSON.stringify` (que já escapa
   // aspas/barras invertidas corretamente) e, além disso, escapamos "<"
   // manualmente: sem isso, um valor contendo literalmente "</script>"

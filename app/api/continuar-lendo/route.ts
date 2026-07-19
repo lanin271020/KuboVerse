@@ -12,7 +12,7 @@ import { acaoListarContinuarLendo } from "@/services/history";
  * ponto dessa árvore força o Next a renderizar a rota inteira sob
  * demanda (dynamic rendering) — ignorando por completo o
  * `export const revalidate = 600` da página, e com isso também o cache
- * do catálogo (MangaDex/MangaLivre), que passava a ser buscado de novo a
+ * do catálogo (MangaDex), que passava a ser buscado de novo a
  * cada visita. Uma Route Handler separada é dinâmica só nela mesma, sem
  * "contaminar" a página que a chama de fora via fetch do client.
  */

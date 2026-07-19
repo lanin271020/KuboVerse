@@ -15,7 +15,7 @@ import type { Obra } from "@/lib/types";
 // Next (cookies()/headers()) — isso incluía `acaoListarContinuarLendo()`
 // até esta correção, que forçava a rota INTEIRA a renderizar sob
 // demanda a cada visita, ignorando por completo este `revalidate` e o
-// cache do catálogo (MangaDex/MangaLivre eram buscados de novo sempre).
+// cache do catálogo (MangaDex era buscada de novo sempre).
 // "Continuar lendo" (que de fato depende da sessão do usuário) agora
 // vive num componente client separado que busca seus próprios dados via
 // /api/continuar-lendo — ver ContinuarLendoContainer.tsx.

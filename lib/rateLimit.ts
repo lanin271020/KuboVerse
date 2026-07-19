@@ -16,7 +16,7 @@
  * lacuna crítica apontada na auditoria: hoje não existe limite NENHUM,
  * então qualquer script pode martelar `/api/busca`/`/api/catalogo` sem
  * fricção alguma (o que também é o principal jeito de estourar o rate
- * limit da própria MangaDex/MangaLivre e arriscar um bloqueio de IP).
+ * limit da própria MangaDex e arriscar um bloqueio de IP).
  */
 
 interface Contador {

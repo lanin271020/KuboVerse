@@ -12,8 +12,8 @@ import {
 // uma leitura longa, sem precisar recarregar a página inteira.
 export const revalidate = 0;
 
-// IDs reais (MangaDex/MangaLivre) nunca passam disso — evita repassar
-// entradas absurdamente longas para a API upstream.
+// IDs reais (MangaDex) nunca passam disso — evita repassar entradas
+// absurdamente longas para a API upstream.
 const TAMANHO_MAXIMO_DO_ID = 200;
 
 export async function GET(

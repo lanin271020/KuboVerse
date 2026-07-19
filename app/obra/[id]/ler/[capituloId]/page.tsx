@@ -103,15 +103,14 @@ export default async function LerCapituloPage({
   // CRÍTICO para a curadoria de conteúdo adulto, não só navegação: sem
   // esta checagem, `buscarPaginasDoCapitulo(capituloId)` era chamada com
   // QUALQUER capituloId da URL, sem confirmar que ele pertence à obra
-  // (já filtrada) pedida. Um capituloId de uma obra adulta (MangaDex ou
-  // MangaLivre) combinado com o `id` de uma obra segura ainda assim
-  // exibia as páginas daquele outro capítulo no leitor — um bypass
-  // completo do filtro de conteúdo. `capitulos` vem de
-  // `buscarCapitulosDaObra(id)`, que já é escopada a ESTA obra (query
-  // `manga=${id}` na MangaDex/slug no MangaLivre), então "não está na
-  // lista" só pode significar capítulo de outra obra, id inválido ou
-  // link desatualizado — em qualquer um desses casos, fail-closed: 404,
-  // nunca renderiza o leitor.
+  // (já filtrada) pedida. Um capituloId de uma obra adulta combinado com
+  // o `id` de uma obra segura ainda assim exibia as páginas daquele
+  // outro capítulo no leitor — um bypass completo do filtro de
+  // conteúdo. `capitulos` vem de `buscarCapitulosDaObra(id)`, que já é
+  // escopada a ESTA obra (query `manga=${id}` na MangaDex), então "não
+  // está na lista" só pode significar capítulo de outra obra, id
+  // inválido ou link desatualizado — em qualquer um desses casos,
+  // fail-closed: 404, nunca renderiza o leitor.
   if (indiceAtual === -1) {
     console.warn(
       `Capítulo ${capituloId} não pertence à obra ${id} (ou não existe) — bloqueado antes de buscar páginas.`

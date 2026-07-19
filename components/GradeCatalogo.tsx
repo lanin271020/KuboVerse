@@ -27,12 +27,10 @@ function normalizarGenero(texto: string): string {
  * Recorte de categorias populares para filtro rápido — não é a lista
  * completa de gêneros/temas das fontes, só os mais buscados.
  *
- * Cada categoria lista TODAS as variações conhecidas do mesmo gênero
- * entre as fontes (MangaDex costuma devolver o nome já em pt-br, mas
- * cai para inglês quando a tag não tem tradução; o MangaLivre traduz
- * uma lista própria em `TRADUCAO_GENEROS`, ver lib/mangalivre.ts) — sem
- * isso, o botão em português só batia com uma obra vinda da fonte que
- * por acaso devolveu o gênero já traduzido, fazendo o filtro mostrar
+ * Cada categoria lista variações do mesmo gênero (MangaDex costuma
+ * devolver o nome já em pt-br, mas cai para inglês quando a tag não tem
+ * tradução) — sem isso, o botão em português só batia com obras que por
+ * acaso devolveram o gênero já traduzido, fazendo o filtro mostrar
  * "nenhuma obra" mesmo quando a categoria tinha itens no catálogo.
  */
 const CATEGORIAS_EM_DESTAQUE: { rotulo: string; chaves: string[] }[] = [
