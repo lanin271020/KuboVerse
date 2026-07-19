@@ -46,9 +46,6 @@ export default async function Home() {
 
       <div className="mb-8 max-w-xl">
         <BarraDeBusca />
-        <p className="mt-3 text-sm text-paper-muted">
-          Manhwas, mangás e manhuas em português — sem conteúdo adulto.
-        </p>
       </div>
 
       <ContinuarLendoContainer />
