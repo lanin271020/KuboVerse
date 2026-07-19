@@ -70,6 +70,16 @@ const TAGS_ADULTAS = new Set([
 ]);
 const REGEX_TITULO_ADULTO = /\b(hentai|sexo|sexual|nude|nudez|xxx|porn[oôõ]?|ecchi)\b/i;
 
+/**
+ * Obras removidas manualmente por slug do MangaLivre — espelho da
+ * denylist por id em lib/mangadex.ts. Usado quando a segunda opinião
+ * da MangaDex falha/não casa o título e a obra ainda entraria pelo
+ * HTML do MangaLivre.
+ */
+const SLUGS_EXCLUIDOS_MANUALMENTE: Record<string, string> = {
+  "mieruko-chan": "Mieruko-chan — conteúdo adulto/fanservice incompatível com a curadoria",
+};
+
 const TRADUCAO_GENEROS: Record<string, string> = {
   action: "Ação",
   adventure: "Aventura",
@@ -370,7 +380,11 @@ async function buscarCardsCatalogoMangaLivre(pagina: number, limite: number): Pr
   try {
     const html = await fetchHtmlComTimeout(url);
     return extrairCardsDoCatalogo(html)
-      .filter((card) => !REGEX_TITULO_ADULTO.test(card.titulo))
+      .filter(
+        (card) =>
+          !REGEX_TITULO_ADULTO.test(card.titulo) &&
+          !(card.slug.toLowerCase() in SLUGS_EXCLUIDOS_MANUALMENTE)
+      )
       .slice(0, limite);
   } catch (err) {
     logFalhaMangaLivre(`Falha ao buscar catálogo do MangaLivre (página ${pagina}):`, err);
@@ -455,6 +469,7 @@ function extrairValorMeta(html: string, rotulo: string): string | null {
  */
 export async function buscarObraPorSlugMangaLivre(slug: string): Promise<Obra | null> {
   if (!REGEX_SLUG_VALIDO.test(slug)) return null;
+  if (slug.toLowerCase() in SLUGS_EXCLUIDOS_MANUALMENTE) return null;
 
   const url = `${MANGALIVRE_BASE_URL}/manga/${slug}/`;
 

@@ -202,6 +202,11 @@ const IDS_EXCLUIDOS_MANUALMENTE: Record<string, string> = {
   // "Comecei a trabalhar como empregado doméstico..." — mesmo padrão:
   // "safe", sem tag reveladora, capa incompatível com a curadoria.
   "ad75039d-686c-457f-b478-e56fc3b3c069": "Kaji Daikou no Arubaito... — capa incompatível com a curadoria apesar da classificação safe",
+  // "Mieruko-chan" — marcada "safe", mas tem fanservice/conteúdo adulto
+  // incompatível com a curadoria infantil do catálogo.
+  "6670ee28-f26d-4b61-b49c-d71149cd5a6e": "Mieruko-chan — conteúdo adulto/fanservice incompatível com a curadoria apesar da classificação safe",
+  "db35d742-8540-4f2f-bc6b-29623c6bbb61": "Mieruko-chan Official Anthology — mesma franquia, mesmo problema de curadoria",
+  "e1a8bdd1-eea2-47cd-927e-0f7654c64c7c": "Mieruko-chan (Pre-Serialization) — mesma franquia, mesmo problema de curadoria",
 };
 
 /**
@@ -426,7 +431,11 @@ export async function buscarSinalConfiavelPorTitulo(titulo: string): Promise<Sin
       if (bate) {
         return {
           tipo: inferirTipo(attrs.originalLanguage, titulo),
-          conteudoAdulto: conteudoEhAdulto(attrs),
+          // Denylist manual conta como adulto também na segunda opinião
+          // (MangaLivre etc.) — senão a obra some da MangaDex e volta
+          // pela outra fonte.
+          conteudoAdulto:
+            conteudoEhAdulto(attrs) || raw.id in IDS_EXCLUIDOS_MANUALMENTE,
         };
       }
     }
