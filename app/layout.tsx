@@ -72,10 +72,6 @@ export default function RootLayout({
         <FavoritosProvider usuarioInicial={null}>
           <Header usuarioInicial={null} />
           <div id="conteudo-principal">{children}</div>
-          <footer className="border-t border-ink-700 px-6 py-6 text-sm text-paper-muted">
-            Este site agrega informações e capítulos de fontes de terceiros
-            (MangaDex e MangaLivre). Não hospedamos nem produzimos o conteúdo exibido.
-          </footer>
         </FavoritosProvider>
       </body>
     </html>
