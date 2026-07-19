@@ -172,19 +172,102 @@ function aguardar(ms: number): Promise<void> {
 const MAXIMO_TENTATIVAS_429 = 3;
 const BACKOFF_BASE_MS = 1000;
 
+// O MangaLivre fica atrás do Cloudflare e costuma devolver 403 para IPs
+// de datacenter (Vercel). Depois do primeiro 403, pausamos as tentativas
+// nesta instância por um tempo — senão o sitemap/catálogo spamam o mesmo
+// erro a cada obra/página e gastam tempo de serverless à toa.
+const BLOQUEIO_APOS_403_MS = 15 * 60 * 1000;
+let mangaLivreBloqueadoAteMs = 0;
+let avisoBloqueio403JaEmitido = false;
+
+class MangaLivreIndisponivelError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MangaLivreIndisponivelError";
+  }
+}
+
+/**
+ * Headers de navegador “cheios” o bastante para o Cloudflare não rejeitar
+ * só por fingerprint mínimo. Não contorna bloqueio de IP de datacenter —
+ * para isso use `MANGALIVRE_PROXY_URL` (ver .env.example).
+ */
+const HEADERS_MANGALIVRE: HeadersInit = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.5",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+  Referer: `${MANGALIVRE_BASE_URL}/`,
+};
+
+/**
+ * Opcional: URL de um proxy (ex.: Cloudflare Worker) que recebe
+ * `?url=<destino>` e devolve o HTML. Sem isso, na Vercel o MangaLivre
+ * tende a falhar com 403 e o catálogo segue só com a MangaDex.
+ */
+function urlParaFetch(url: string): string {
+  const proxy = process.env.MANGALIVRE_PROXY_URL?.trim();
+  if (!proxy) return url;
+  const base = proxy.replace(/\/$/, "");
+  return `${base}?url=${encodeURIComponent(url)}`;
+}
+
+function headersParaFetch(): HeadersInit {
+  const secret = process.env.MANGALIVRE_PROXY_SECRET?.trim();
+  if (!secret || !process.env.MANGALIVRE_PROXY_URL?.trim()) {
+    return HEADERS_MANGALIVRE;
+  }
+  return { ...HEADERS_MANGALIVRE, "X-Proxy-Secret": secret };
+}
+
+function logFalhaMangaLivre(contexto: string, err: unknown): void {
+  if (err instanceof MangaLivreIndisponivelError) return;
+  console.warn(contexto, err);
+}
+
+function marcarBloqueio403(url: string): never {
+  mangaLivreBloqueadoAteMs = Date.now() + BLOQUEIO_APOS_403_MS;
+  if (!avisoBloqueio403JaEmitido) {
+    avisoBloqueio403JaEmitido = true;
+    console.warn(
+      `MangaLivre bloqueou o servidor com 403 (Cloudflare) em ${url}. ` +
+        `Catálogo segue só com MangaDex pelos próximos ${BLOQUEIO_APOS_403_MS / 60_000} min. ` +
+        `Para reativar na Vercel, configure MANGALIVRE_PROXY_URL.`
+    );
+  }
+  throw new MangaLivreIndisponivelError(`MangaLivre respondeu 403 para ${url}`);
+}
+
 async function fetchHtmlComTimeout(url: string, timeoutMs = 10000): Promise<string> {
+  if (Date.now() < mangaLivreBloqueadoAteMs) {
+    throw new MangaLivreIndisponivelError(
+      "MangaLivre temporariamente desativado após 403 (Cloudflare)."
+    );
+  }
+
+  const urlFetch = urlParaFetch(url);
+
   for (let tentativa = 0; ; tentativa++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url, {
+      const res = await fetch(urlFetch, {
         signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.5",
-        },
+        headers: headersParaFetch(),
+        // Não cachear página de desafio/403 do Cloudflare como se fosse HTML útil.
+        cache: "no-store",
       });
+      if (res.status === 403) {
+        marcarBloqueio403(url);
+      }
       if (res.status === 429 && tentativa < MAXIMO_TENTATIVAS_429) {
         const retryAfterHeader = Number(res.headers.get("retry-after"));
         const esperaMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
@@ -197,7 +280,15 @@ async function fetchHtmlComTimeout(url: string, timeoutMs = 10000): Promise<stri
       if (!res.ok) {
         throw new Error(`MangaLivre respondeu ${res.status} para ${url}`);
       }
-      return await res.text();
+      const html = await res.text();
+      // Desafio JS do Cloudflare às vezes vem como 200 com corpo de challenge.
+      if (/just a moment|cf-browser-verification|__cf_chl/i.test(html)) {
+        marcarBloqueio403(url);
+      }
+      // Sucesso real — libera o circuit breaker se um proxy passou a funcionar.
+      mangaLivreBloqueadoAteMs = 0;
+      avisoBloqueio403JaEmitido = false;
+      return html;
     } finally {
       clearTimeout(timeout);
     }
@@ -282,7 +373,7 @@ async function buscarCardsCatalogoMangaLivre(pagina: number, limite: number): Pr
       .filter((card) => !REGEX_TITULO_ADULTO.test(card.titulo))
       .slice(0, limite);
   } catch (err) {
-    console.warn(`Falha ao buscar catálogo do MangaLivre (página ${pagina}):`, err);
+    logFalhaMangaLivre(`Falha ao buscar catálogo do MangaLivre (página ${pagina}):`, err);
     return [];
   }
 }
@@ -305,7 +396,10 @@ export async function buscarCatalogoMangaLivre(pagina: number, limite: number): 
   const cards = await buscarCardsCatalogoMangaLivre(pagina, limite);
   const obras = await executarEmLotes(cards, 5, (card) =>
     buscarObraPorSlugMangaLivre(card.slug).catch((err) => {
-      console.warn(`Falha ao verificar conteúdo da obra MangaLivre "${card.slug}" no catálogo:`, err);
+      logFalhaMangaLivre(
+        `Falha ao verificar conteúdo da obra MangaLivre "${card.slug}" no catálogo:`,
+        err
+      );
       return null;
     })
   );
@@ -338,7 +432,10 @@ export async function buscarPorTituloMangaLivre(query: string, maxPaginas = 3): 
 
   const obras = await executarEmLotes(candidatos, 5, (card) =>
     buscarObraPorSlugMangaLivre(card.slug).catch((err) => {
-      console.warn(`Falha ao verificar conteúdo da obra MangaLivre "${card.slug}" na busca:`, err);
+      logFalhaMangaLivre(
+        `Falha ao verificar conteúdo da obra MangaLivre "${card.slug}" na busca:`,
+        err
+      );
       return null;
     })
   );
@@ -365,7 +462,7 @@ export async function buscarObraPorSlugMangaLivre(slug: string): Promise<Obra | 
   try {
     html = await fetchHtmlComTimeout(url);
   } catch (err) {
-    console.warn(`Falha ao buscar a obra "${slug}" no MangaLivre:`, err);
+    logFalhaMangaLivre(`Falha ao buscar a obra "${slug}" no MangaLivre:`, err);
     return null;
   }
 
@@ -504,7 +601,7 @@ export async function buscarCapitulosDaObraMangaLivre(slug: string): Promise<Cap
   try {
     html = await fetchHtmlComTimeout(url);
   } catch (err) {
-    console.warn(`Falha ao buscar capítulos da obra "${slug}" no MangaLivre:`, err);
+    logFalhaMangaLivre(`Falha ao buscar capítulos da obra "${slug}" no MangaLivre:`, err);
     return [];
   }
 
@@ -564,7 +661,9 @@ export async function buscarPaginasDoCapituloMangaLivre(chapterSlug: string): Pr
     const paginas = extrairImagensDoCapitulo(html);
     return { data: paginas, dataSaver: paginas };
   } catch (err) {
-    console.error(`Falha ao buscar páginas do capítulo "${chapterSlug}" no MangaLivre:`, err);
+    if (!(err instanceof MangaLivreIndisponivelError)) {
+      console.error(`Falha ao buscar páginas do capítulo "${chapterSlug}" no MangaLivre:`, err);
+    }
     return { data: [], dataSaver: [] };
   }
 }
