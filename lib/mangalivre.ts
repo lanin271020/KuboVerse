@@ -435,8 +435,39 @@ async function buscarCardsCatalogoMangaLivre(pagina: number, limite: number): Pr
  * a listagem, mas é o preço da curadoria correta; catálogo menor porém
  * organizado é preferível a um catálogo maior mas com material adulto.
  */
+
+/**
+ * Slugs que sempre tentamos incluir (página 1 do catálogo / busca por
+ * título), porque a listagem geral do MangaLivre é ordenada por update
+ * e obras grandes com sequência completa (ex.: Jujutsu Kaisen, 271 caps)
+ * podem demorar a aparecer nas primeiras páginas — e a MangaDex tem
+ * pouquíssimos caps pt-BR delas.
+ */
+const SLUGS_PRIORITARIOS_MANGALIVRE = [
+  "jujutsu-kaisen",
+  "jujutsu-kaisen-0",
+];
+
+function slugificarBusca(query: string): string {
+  return query
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export async function buscarCatalogoMangaLivre(pagina: number, limite: number): Promise<Obra[]> {
   const cards = await buscarCardsCatalogoMangaLivre(pagina, limite);
+  // Na primeira página, garante que shonen prioritários (mais caps que a
+  // MangaDex) entrem na leva mesmo fora do "mais recentes" do site.
+  if (pagina <= 1) {
+    for (const slug of SLUGS_PRIORITARIOS_MANGALIVRE) {
+      if (!cards.some((c) => c.slug === slug)) {
+        cards.unshift({ slug, titulo: slug, capa: null });
+      }
+    }
+  }
   const obras = await executarEmLotes(cards, 5, (card) =>
     buscarObraPorSlugMangaLivre(card.slug).catch((err) => {
       logFalhaMangaLivre(
@@ -446,7 +477,7 @@ export async function buscarCatalogoMangaLivre(pagina: number, limite: number): 
       return null;
     })
   );
-  return obras.filter((obra): obra is Obra => obra !== null);
+  return obras.filter((obra): obra is Obra => obra !== null).slice(0, limite);
 }
 
 /**
@@ -467,6 +498,17 @@ export async function buscarPorTituloMangaLivre(query: string, maxPaginas = 3): 
   if (!queryNormalizada) return [];
 
   const candidatos: CardCatalogoMangaLivre[] = [];
+  const slugDireto = slugificarBusca(query);
+  if (slugDireto && REGEX_SLUG_VALIDO.test(slugDireto)) {
+    candidatos.push({ slug: slugDireto, titulo: query, capa: null });
+  }
+  for (const slug of SLUGS_PRIORITARIOS_MANGALIVRE) {
+    if (normalizarTexto(slug.replace(/-/g, " ")).includes(queryNormalizada)) {
+      if (!candidatos.some((c) => c.slug === slug)) {
+        candidatos.push({ slug, titulo: slug, capa: null });
+      }
+    }
+  }
   for (let pagina = 1; pagina <= maxPaginas; pagina++) {
     const cards = await buscarCardsCatalogoMangaLivre(pagina, 20);
     if (cards.length === 0) break;
@@ -559,7 +601,18 @@ export async function buscarObraPorSlugMangaLivre(slug: string): Promise<Obra | 
     return null;
   });
 
-  if (sinalMangaDex?.conteudoAdulto) {
+  // "suggestive" na MangaDex NÃO bloqueia sozinho no MangaLivre quando
+  // a obra é manhwa/shonen — senão some Jujutsu Kaisen e outros shonen
+  // de ação com centenas de caps pt-BR aqui, mas só 3 na MangaDex.
+  // Erotica/pornographic/denylist continuam fail-closed.
+  if (sinalMangaDex?.bloqueioAdultoSevero) {
+    return null;
+  }
+  if (
+    sinalMangaDex?.conteudoAdulto &&
+    sinalMangaDex.tipo !== "manhwa" &&
+    !sinalMangaDex.demograficoShonen
+  ) {
     return null;
   }
 

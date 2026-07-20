@@ -101,10 +101,40 @@ function normalizarParaComparar(texto: string): string {
     .trim();
 }
 
-/** Evita o mesmo título duas vezes (MangaDex + MangaLivre). */
-function semDuplicatas(referencia: Obra[], candidatas: Obra[]): Obra[] {
-  const titulosExistentes = new Set(referencia.map((o) => normalizarParaComparar(o.titulo)));
-  return candidatas.filter((o) => !titulosExistentes.has(normalizarParaComparar(o.titulo)));
+/**
+ * Mescla MangaDex + MangaLivre sem repetir título. Quando o mesmo título
+ * aparece nas duas, fica a obra com mais capítulos na sequência válida
+ * (ex.: Jujutsu Kaisen — 3 caps na MangaDex vs 271 no MangaLivre).
+ */
+async function mesclarPreferindoMaisCapitulos(
+  primarias: Obra[],
+  secundarias: Obra[]
+): Promise<Obra[]> {
+  const porTitulo = new Map<string, Obra>();
+
+  async function considerar(obra: Obra) {
+    const chave = normalizarParaComparar(obra.titulo);
+    const atual = porTitulo.get(chave);
+    if (!atual) {
+      porTitulo.set(chave, obra);
+      return;
+    }
+    try {
+      const [capsAtual, capsNova] = await Promise.all([
+        buscarCapitulosDaObra(atual.id),
+        buscarCapitulosDaObra(obra.id),
+      ]);
+      const nAtual = temSequenciaContinuaDesdeUm(capsAtual) ? capsAtual.length : 0;
+      const nNova = temSequenciaContinuaDesdeUm(capsNova) ? capsNova.length : 0;
+      if (nNova > nAtual) porTitulo.set(chave, obra);
+    } catch {
+      // Mantém a que já estava se não der para comparar.
+    }
+  }
+
+  for (const obra of primarias) await considerar(obra);
+  for (const obra of secundarias) await considerar(obra);
+  return Array.from(porTitulo.values());
 }
 
 export const LIMITE_PADRAO_CATALOGO = 20;
@@ -124,14 +154,14 @@ export async function buscarCatalogo(
     }),
   ]);
 
-  const mangaLivreSemDuplicatas = semDuplicatas(doMangaDex.traduzidas, doMangaLivre);
+  const mescladas = await mesclarPreferindoMaisCapitulos(
+    doMangaDex.traduzidas,
+    doMangaLivre
+  );
 
   const temMais = doMangaDex.temMais || doMangaLivre.length >= limiteSeguro;
 
-  const traduzidas = await filtrarPorSequenciaValida([
-    ...doMangaDex.traduzidas,
-    ...mangaLivreSemDuplicatas,
-  ]);
+  const traduzidas = await filtrarPorSequenciaValida(mescladas);
 
   return { traduzidas, semTraducao: doMangaDex.semTraducao, temMais };
 }
@@ -171,10 +201,11 @@ export async function buscarPorTitulo(
     }),
   ]);
 
-  const traduzidas = await filtrarPorSequenciaValida([
-    ...doMangaDex.traduzidas,
-    ...semDuplicatas(doMangaDex.traduzidas, doMangaLivre),
-  ]);
+  const mescladas = await mesclarPreferindoMaisCapitulos(
+    doMangaDex.traduzidas,
+    doMangaLivre
+  );
+  const traduzidas = await filtrarPorSequenciaValida(mescladas);
 
   return {
     traduzidas,

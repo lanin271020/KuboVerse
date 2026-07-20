@@ -400,6 +400,13 @@ export interface SinalConfiavelMangaDex {
   conteudoAdulto: boolean;
   /** true quando a MangaDex marca a obra como demografia shonen. */
   demograficoShonen: boolean;
+  /**
+   * true só para erotica/pornographic ou denylist manual — NÃO inclui
+   * "suggestive" sozinho. Usado pelo MangaLivre: shonen de ação (ex.:
+   * Jujutsu Kaisen) costuma ser "suggestive" na MangaDex sem ser o
+   * fanservice/ecchi que a curadoria quer barrar nessa fonte.
+   */
+  bloqueioAdultoSevero: boolean;
 }
 
 /**
@@ -436,16 +443,19 @@ export async function buscarSinalConfiavelPorTitulo(titulo: string): Promise<Sin
         const tagsNome = (attrs.tags ?? [])
           .map((tag) => tag.attributes?.name?.en ?? "")
           .join(" ");
+        const naDenylist = raw.id in IDS_EXCLUIDOS_MANUALMENTE;
+        const rating = (attrs.contentRating ?? "").toLowerCase();
         return {
           tipo: inferirTipo(attrs.originalLanguage, titulo),
           // Denylist manual conta como adulto também na segunda opinião
           // (MangaLivre etc.) — senão a obra some da MangaDex e volta
           // pela outra fonte.
-          conteudoAdulto:
-            conteudoEhAdulto(attrs) || raw.id in IDS_EXCLUIDOS_MANUALMENTE,
+          conteudoAdulto: conteudoEhAdulto(attrs) || naDenylist,
           demograficoShonen:
             attrs.publicationDemographic === "shounen" ||
             /\bshou?nen\b/i.test(tagsNome),
+          bloqueioAdultoSevero:
+            naDenylist || rating === "erotica" || rating === "pornographic",
         };
       }
     }
