@@ -42,6 +42,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "uploads.mangadex.org",
       },
+      {
+        protocol: "https",
+        hostname: "mangalivre.blog",
+      },
     ],
   },
   async headers() {

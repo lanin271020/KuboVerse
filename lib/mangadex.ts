@@ -43,6 +43,8 @@ interface MangaDexMangaAttributes {
   status?: string;
   originalLanguage?: string;
   availableTranslatedLanguages?: string[];
+  // shounen | seinen | shoujo | josei — demografia editorial da obra.
+  publicationDemographic?: string;
   tags?: MangaDexTag[];
   contentRating?: string;
 }
@@ -396,6 +398,8 @@ function normalizarTituloParaComparar(texto: string): string {
 export interface SinalConfiavelMangaDex {
   tipo: TipoObra;
   conteudoAdulto: boolean;
+  /** true quando a MangaDex marca a obra como demografia shonen. */
+  demograficoShonen: boolean;
 }
 
 /**
@@ -429,6 +433,9 @@ export async function buscarSinalConfiavelPorTitulo(titulo: string): Promise<Sin
         (t) => normalizarTituloParaComparar(t) === tituloNormalizado
       );
       if (bate) {
+        const tagsNome = (attrs.tags ?? [])
+          .map((tag) => tag.attributes?.name?.en ?? "")
+          .join(" ");
         return {
           tipo: inferirTipo(attrs.originalLanguage, titulo),
           // Denylist manual conta como adulto também na segunda opinião
@@ -436,6 +443,9 @@ export async function buscarSinalConfiavelPorTitulo(titulo: string): Promise<Sin
           // pela outra fonte.
           conteudoAdulto:
             conteudoEhAdulto(attrs) || raw.id in IDS_EXCLUIDOS_MANUALMENTE,
+          demograficoShonen:
+            attrs.publicationDemographic === "shounen" ||
+            /\bshou?nen\b/i.test(tagsNome),
         };
       }
     }

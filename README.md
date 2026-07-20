@@ -1,9 +1,10 @@
 # KuboVerse — leitor de Manhwa/Mangá/Manhua
 
 Leitor de manhwas, mangás e manhuas traduzidos em português,
-agregando dados/capítulos da MangaDex (API). Site pensado para um
+agregando dados/capítulos da MangaDex (fonte principal) e do MangaLivre
+(fonte secundária: só manhwa e mangá shonen). Site pensado para um
 público infantil/geral: conteúdo adulto é filtrado ativamente em toda
-a cadeia de importação (ver `lib/mangadex.ts`).
+a cadeia de importação (ver `lib/mangadex.ts` e `lib/mangalivre.ts`).
 
 ## Stack
 
@@ -68,10 +69,10 @@ a cadeia de importação (ver `lib/mangadex.ts`).
 
 ## Moderação e curadoria de conteúdo
 
-- Toda obra importada da MangaDex passa por filtros de classificação
-  de conteúdo, tags e regex de título/sinopse antes de entrar no
-  catálogo — ver comentários detalhados em `lib/mangadex.ts`. A
-  política é "fail-closed": na dúvida, a obra é excluída, não incluída.
+- Toda obra importada passa por filtros de classificação de conteúdo,
+  tags e regex de título/sinopse — ver `lib/mangadex.ts` e
+  `lib/mangalivre.ts`. Do MangaLivre entram só manhwa e mangá shonen.
+  A política é "fail-closed": na dúvida, a obra é excluída.
 - Comentários de usuários passam por moderação básica (conteúdo sexual,
   palavrão, links, spam) em `lib/moderacao.ts`, e podem ser denunciados
   pela comunidade (`services/comments.ts`).
@@ -83,8 +84,8 @@ a cadeia de importação (ver `lib/mangadex.ts`).
 
 - `app/` — rotas (App Router): páginas, Route Handlers, metadata
   (`sitemap.ts`, `robots.ts`, `icon.tsx`)
-- `lib/` — acesso a dados externos (MangaDex), validação, moderação,
-  rate limiting
+- `lib/` — acesso a dados externos (MangaDex/MangaLivre), validação,
+  moderação, rate limiting
 - `services/` — Server Actions que falam com o Supabase (auth,
   favoritos, histórico, comentários, perfil)
 - `components/` — componentes de UI
