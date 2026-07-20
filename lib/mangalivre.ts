@@ -713,7 +713,11 @@ export async function buscarCapitulosDaObraMangaLivre(slug: string): Promise<Cap
   for (const item of itens) {
     const bloco = item[1] ?? "";
     const linkMatch = bloco.match(/<a href="([^"]+)" class="chapter-link"/);
-    const numeroMatch = bloco.match(/<span class="chapter-number">\s*Cap[ií]tulo\s+([\d.]+)\s*<\/span>/i);
+    // O tema às vezes coloca subtítulo no mesmo span
+    // (ex.: "Capítulo 271: Epílogo") e quebra linha após a abertura da tag.
+    const numeroMatch = bloco.match(
+      /<span class="chapter-number">[\s\S]*?Cap[ií]tulo\s+([\d.]+)/i
+    );
     const dataMatch = bloco.match(/<span class="chapter-date">([^<]+)<\/span>/);
     if (!linkMatch || !numeroMatch) continue;
 
