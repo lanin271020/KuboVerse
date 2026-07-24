@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   buscarObraPorId,
   buscarCapitulosDaObra,
-  temSequenciaContinuaDesdeUm,
+  traducaoEstaDisponivelParaLeitura,
   decodificarId,
 } from "@/lib/catalogo";
 import type { Obra, Capitulo, TipoObra } from "@/lib/types";
@@ -103,7 +103,7 @@ export default async function ObraPage({
   // (`temTraducaoPtBr === false`) ficam de fora dessa checagem: elas têm
   // zero capítulos por definição, e isso é um estado normal e já tratado
   // na UI abaixo — não uma sequência "quebrada".
-  if (obra.temTraducaoPtBr && !temSequenciaContinuaDesdeUm(capitulos)) {
+  if (obra.temTraducaoPtBr && !traducaoEstaDisponivelParaLeitura(id, capitulos)) {
     notFound();
   }
 

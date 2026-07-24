@@ -3,7 +3,7 @@ import {
   buscarPaginasDoCapitulo,
   buscarCapitulosDaObra,
   buscarObraPorId,
-  temSequenciaContinuaDesdeUm,
+  traducaoEstaDisponivelParaLeitura,
 } from "@/lib/catalogo";
 
 // O token embutido nas URLs do MangaDex@Home tem vida curta. Esta rota
@@ -58,7 +58,7 @@ export async function GET(
     return NextResponse.json({ error: "Capítulo não encontrado para esta obra." }, { status: 404 });
   }
 
-  if (obra.temTraducaoPtBr && !temSequenciaContinuaDesdeUm(capitulos)) {
+  if (obra.temTraducaoPtBr && !traducaoEstaDisponivelParaLeitura(obraId, capitulos)) {
     return NextResponse.json({ error: "Capítulo não encontrado para esta obra." }, { status: 404 });
   }
 

@@ -10,6 +10,7 @@ import {
 import {
   ehIdMangaLivre,
   idParaSlugMangaLivre,
+  ehObraPrioritariaMangaLivre,
   buscarCatalogoMangaLivre,
   buscarObraPorSlugMangaLivre,
   buscarCapitulosDaObraMangaLivre,
@@ -63,6 +64,10 @@ function extrairNumerosDeCapitulo(capitulos: Capitulo[]): number[] {
 /**
  * Regra de curadoria: tradução pt-BR em sequência contínua a partir do
  * capítulo 1 (1, 2, 3, … N), sem buracos.
+ *
+ * Obras prioritárias do MangaLivre (pedidas explicitamente, ex.: One Punch
+ * Man) só precisam ter capítulos listados — a listagem do site costuma
+ * ter buracos mesmo com centenas de caps disponíveis.
  */
 export function temSequenciaContinuaDesdeUm(capitulos: Capitulo[]): boolean {
   const numeros = extrairNumerosDeCapitulo(capitulos);
@@ -77,11 +82,21 @@ export function temSequenciaContinuaDesdeUm(capitulos: Capitulo[]): boolean {
   return true;
 }
 
+export function traducaoEstaDisponivelParaLeitura(
+  obraId: string,
+  capitulos: Capitulo[]
+): boolean {
+  if (ehObraPrioritariaMangaLivre(obraId)) {
+    return capitulos.length > 0;
+  }
+  return temSequenciaContinuaDesdeUm(capitulos);
+}
+
 async function filtrarPorSequenciaValida(obras: Obra[]): Promise<Obra[]> {
   const resultados = await executarEmLotes(obras, 5, async (obra) => {
     try {
       const capitulos = await buscarCapitulosDaObra(obra.id);
-      return temSequenciaContinuaDesdeUm(capitulos) ? obra : null;
+      return traducaoEstaDisponivelParaLeitura(obra.id, capitulos) ? obra : null;
     } catch (err) {
       console.warn(
         `Não foi possível validar a sequência de capítulos da obra "${obra.titulo}" (${obra.id}) — removida do catálogo por precaução:`,
@@ -124,8 +139,12 @@ async function mesclarPreferindoMaisCapitulos(
         buscarCapitulosDaObra(atual.id),
         buscarCapitulosDaObra(obra.id),
       ]);
-      const nAtual = temSequenciaContinuaDesdeUm(capsAtual) ? capsAtual.length : 0;
-      const nNova = temSequenciaContinuaDesdeUm(capsNova) ? capsNova.length : 0;
+      const nAtual = traducaoEstaDisponivelParaLeitura(atual.id, capsAtual)
+        ? capsAtual.length
+        : 0;
+      const nNova = traducaoEstaDisponivelParaLeitura(obra.id, capsNova)
+        ? capsNova.length
+        : 0;
       if (nNova > nAtual) porTitulo.set(chave, obra);
     } catch {
       // Mantém a que já estava se não der para comparar.

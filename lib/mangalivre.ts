@@ -97,13 +97,19 @@ function temSinalShonen(
   return false;
 }
 
-/** Fail-closed: mangá sem sinal claro de shonen é rejeitado. */
+/** Fail-closed: mangá sem sinal claro de shonen é rejeitado.
+ *  Slugs prioritários (pedidos na curadoria) fogem só da régua shonen —
+ *  manhua continua barrado; filtros de adulto seguem valendo.
+ */
 function passaCuradoriaTipoMangaLivre(
   tipo: TipoObra,
   generos: string[],
   tagsBrutas: string[],
-  sinalMangaDex: { demograficoShonen?: boolean } | null
+  sinalMangaDex: { demograficoShonen?: boolean } | null,
+  slug: string
 ): boolean {
+  if (tipo === "manhua") return false;
+  if (ehSlugPrioritarioMangaLivre(slug)) return true;
   if (tipo === "manhwa") return true;
   if (tipo === "manga") return temSinalShonen(generos, tagsBrutas, sinalMangaDex);
   return false;
@@ -446,7 +452,17 @@ async function buscarCardsCatalogoMangaLivre(pagina: number, limite: number): Pr
 const SLUGS_PRIORITARIOS_MANGALIVRE = [
   "jujutsu-kaisen",
   "jujutsu-kaisen-0",
+  "one-punch-man",
 ];
+
+/** Obras pedidas explicitamente — entram mesmo fora da régua shonen-only. */
+export function ehSlugPrioritarioMangaLivre(slug: string): boolean {
+  return SLUGS_PRIORITARIOS_MANGALIVRE.includes(slug.toLowerCase());
+}
+
+export function ehObraPrioritariaMangaLivre(id: string): boolean {
+  return ehIdMangaLivre(id) && ehSlugPrioritarioMangaLivre(idParaSlugMangaLivre(id));
+}
 
 function slugificarBusca(query: string): string {
   return query
@@ -604,14 +620,16 @@ export async function buscarObraPorSlugMangaLivre(slug: string): Promise<Obra | 
   // "suggestive" na MangaDex NÃO bloqueia sozinho no MangaLivre quando
   // a obra é manhwa/shonen — senão some Jujutsu Kaisen e outros shonen
   // de ação com centenas de caps pt-BR aqui, mas só 3 na MangaDex.
-  // Erotica/pornographic/denylist continuam fail-closed.
+  // Slugs prioritários (ex.: One Punch Man / seinen) seguem a mesma
+  // lógica. Erotica/pornographic/denylist continuam fail-closed.
   if (sinalMangaDex?.bloqueioAdultoSevero) {
     return null;
   }
   if (
     sinalMangaDex?.conteudoAdulto &&
     sinalMangaDex.tipo !== "manhwa" &&
-    !sinalMangaDex.demograficoShonen
+    !sinalMangaDex.demograficoShonen &&
+    !ehSlugPrioritarioMangaLivre(slug)
   ) {
     return null;
   }
@@ -662,7 +680,8 @@ export async function buscarObraPorSlugMangaLivre(slug: string): Promise<Obra | 
   }
 
   // Só manhwa OU mangá shonen — ver passaCuradoriaTipoMangaLivre.
-  if (!passaCuradoriaTipoMangaLivre(tipo, generos, tagsBrutas, sinalMangaDex)) {
+  // Slugs prioritários (ex.: One Punch Man / seinen) são exceção explícita.
+  if (!passaCuradoriaTipoMangaLivre(tipo, generos, tagsBrutas, sinalMangaDex, slug)) {
     return null;
   }
 

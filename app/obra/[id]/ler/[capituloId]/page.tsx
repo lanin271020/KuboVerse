@@ -5,7 +5,7 @@ import {
   buscarCapitulosDaObra,
   buscarPaginasDoCapitulo,
   decodificarId,
-  temSequenciaContinuaDesdeUm,
+  traducaoEstaDisponivelParaLeitura,
   type PaginasDoCapitulo,
 } from "@/lib/catalogo";
 import { LeitorCapitulo } from "@/components/LeitorCapitulo";
@@ -94,7 +94,7 @@ export default async function LerCapituloPage({
   // Mesma curadoria da página da obra (ver app/obra/[id]/page.tsx): uma
   // obra removida do catálogo por sequência quebrada não deve continuar
   // legível via link direto/salvo para um capítulo específico.
-  if (obra.temTraducaoPtBr && !temSequenciaContinuaDesdeUm(capitulos)) {
+  if (obra.temTraducaoPtBr && !traducaoEstaDisponivelParaLeitura(id, capitulos)) {
     notFound();
   }
 
